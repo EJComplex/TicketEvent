@@ -1,0 +1,17 @@
+dependencies:
+  # - <organization/repo>@<version>
+  - smartcontractkit/chainlink@1.13.0
+compiler:
+  solc:
+    remappings:
+      - '@chainlink=smartcontractkit/chainlink@1.13.0'
+dotenv: .env
+networks:
+  default: development
+  mainnet-fork:
+    cmd_settings:
+      unlock: 
+        # - address to unlock
+    # uniswap_router_v2: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'
+wallets:
+  from_key: ${PRIVATE_KEY}
