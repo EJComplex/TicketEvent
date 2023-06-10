@@ -2,6 +2,9 @@ Ticket Contract Spec -
 
 Ticket contract is ERC721 with extensions like metadata, enumerable? ERC721PresetMinterPauserAutoId? wrapper?, pausable, 
 Mint contract inherits from ERC721, ownable. Mint contract defines whitelisting, defines venue ticket arrangement, minting. use price oracle for payment.
+How to create different tiers of NFT? mint 0-1000 for $100. mint 1001-10000 for $50, etc.
+Initially make Entire contract deployed from external account. Then parametrize it for deployment from on chain contract.
+
 
 ###################################
 Factory Contract:
