@@ -1,5 +1,5 @@
 from scripts.script_library import get_account
-from scripts.deploy import deployEvent, configureEvent, buyTicket
+from scripts.deploy import deployEvent, configureEvent, buyTicket, deployMock
 from brownie import network, config, exceptions
 
 
@@ -13,14 +13,20 @@ import pytest
 
 # test mint price,
 
+# Fix tests, parameterize tests and functions, create tests for each function.
+
 
 # module wide deploy and mock.
 @pytest.fixture(scope="module", autouse=True)
 def default_deploy_configure():
     account = get_account()
+    # deploy mocks
+    DECIMALS = 8
+    INITIAL_VALUE = 200000000000
+    depMockV3 = deployMock(account, DECIMALS, INITIAL_VALUE)
     ticketName = "Test Event"
     ticketSymbol = "TEST"
-    depEvent = deployEvent(account, ticketName, ticketSymbol)
+    depEvent = deployEvent(account, ticketName, ticketSymbol, depMockV3.address)
     configTxList = configureEvent(account, depEvent)
 
     return account, depEvent
@@ -36,7 +42,11 @@ def test_deploy():
     account = get_account()
     ticketName = "Test Event"
     ticketSymbol = "TEST"
-    depEvent = deployEvent(account, ticketName, ticketSymbol)
+    # deploy mocks
+    DECIMALS = 8
+    INITIAL_VALUE = 200000000000
+    depMockV3 = deployMock(account, DECIMALS, INITIAL_VALUE)
+    depEvent = deployEvent(account, ticketName, ticketSymbol, depMockV3)
 
     assert depEvent.name() == "Test Event"
     assert depEvent.symbol() == "TEST"
@@ -47,7 +57,11 @@ def test_configure():
     account = get_account()
     ticketName = "Test Event"
     ticketSymbol = "TEST"
-    depEvent = deployEvent(account, ticketName, ticketSymbol)
+    # deploy mocks
+    DECIMALS = 8
+    INITIAL_VALUE = 200000000000
+    depMockV3 = deployMock(account, DECIMALS, INITIAL_VALUE)
+    depEvent = deployEvent(account, ticketName, ticketSymbol, depMockV3)
     assert depEvent.event_state() == 1
 
     configTxList = configureEvent(account, depEvent)
@@ -56,7 +70,7 @@ def test_configure():
     for i in range(3):
         assert depEvent.classURI(i) == str(i)
         assert depEvent.classLimit(i) == 10
-        assert depEvent.classPrice(i) == i
+        assert depEvent.classPrice(i) == Web3.toWei(50, "ether")
 
 
 # buyTicket(), balanceOf(), tokenURI(), ownerOf(), Transfer Event
@@ -64,11 +78,16 @@ def test_buy_ticket():
     account = get_account()
     ticketName = "Test Event"
     ticketSymbol = "TEST"
-    depEvent = deployEvent(account, ticketName, ticketSymbol)
+    # deploy mocks
+    DECIMALS = 8
+    INITIAL_VALUE = 200000000000
+    depMockV3 = deployMock(account, DECIMALS, INITIAL_VALUE)
+    depEvent = deployEvent(account, ticketName, ticketSymbol, depMockV3)
+
     configTxList = configureEvent(account, depEvent)
     assert depEvent.balanceOf(account) == 0
 
-    txBuyTicket = buyTicket(account, depEvent)
+    txBuyTicket = buyTicket(account, depEvent, quantity=1)
     assert depEvent.balanceOf(account) == 1
 
     tokenId = txBuyTicket.events["Transfer"]["tokenId"]
@@ -108,7 +127,11 @@ def test_only_owner():
     account = get_account()
     ticketName = "Test Event"
     ticketSymbol = "TEST"
-    depEvent = deployEvent(account, ticketName, ticketSymbol)
+    # deploy mocks
+    DECIMALS = 8
+    INITIAL_VALUE = 200000000000
+    depMockV3 = deployMock(account, DECIMALS, INITIAL_VALUE)
+    depEvent = deployEvent(account, ticketName, ticketSymbol, depMockV3)
     account2 = get_account(index=1)
     with pytest.raises(exceptions.VirtualMachineError):
         txOpen = depEvent.openEvent({"from": account2})

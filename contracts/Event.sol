@@ -5,10 +5,12 @@ import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 // Simple. Can mint from 3 ranges of tickets, with 3 different prices. Ticket type is defined by the tokenId being in the defined range.
 // Not addTicket(). Instead just limit mint based on constants/variables defined in the contract
 // Implement payment with ETH, then with select tokens
+// add function to update price feed
 //
 // 3 separate NFT contracts for the 3 levels. Or a dynamic NFT with a modular amount of levels???
 //
@@ -19,87 +21,86 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
     // Base URI
     string private _baseStringURI;
 
-    //uint256 private _tokenLimitA;
-    //uint256 private _tokenLimitB;
-    //uint256 private _tokenLimitC;
+    // Price Feed
+    AggregatorV3Interface internal ethUsdPriceFeed;
 
+    // State
     enum EVENT_STATE {
         OPEN,
         CLOSED
     }
-
     EVENT_STATE public event_state;
 
-    // USD. Price feed determines ETH equivalent
-    //uint256 private _priceA;
-    //uint256 private _priceB;
-    //uint256 private _priceC;
-
-    //ticketLimit cannot exceed _tokenLimit
-    //uint256 public ticketLimitA;
-    //uint256 public ticketLimitB;
-    //uint256 public ticketLimitC;
-
+    // Class mappings, URI, Count Limit, Price
     mapping(uint256 => string) public classURI;
     mapping(uint256 => uint256) public classLimit;
     mapping(uint256 => uint256) public classPrice;
 
     constructor(
         string memory tokenName,
-        string memory tokenSymbol
+        string memory tokenSymbol,
+        address _priceFeedAddress
     ) ConfirmedOwner(msg.sender) ERC721(tokenName, tokenSymbol) {
         event_state = EVENT_STATE.CLOSED;
+        ethUsdPriceFeed = AggregatorV3Interface(_priceFeedAddress);
     }
 
     function openEvent() public onlyOwner {
         event_state = EVENT_STATE.OPEN;
     }
 
+    function updatePriceFeed(address _newPriceFeed) public onlyOwner {
+        ethUsdPriceFeed = AggregatorV3Interface(_newPriceFeed);
+    }
+
+    function getTicketPrice(uint256 class) public view returns (uint256) {
+        (, int256 price, , , ) = ethUsdPriceFeed.latestRoundData();
+        uint256 adjustedPrice = uint256(price) * 10 ** 10; //18 decimals
+        uint256 costTicket = (classPrice[class] * 10 ** 18) / adjustedPrice;
+        return costTicket;
+    }
+
     // function to buy x number of one class of ticket
     // Example for TicketA
     function buyTicket(uint256 numberOfTickets, uint256 class) public payable {
         require(event_state == EVENT_STATE.OPEN, "Event is not open!");
+        require(
+            (msg.value) >= (getTicketPrice(class) * numberOfTickets),
+            "Not enough ETH!"
+        );
+
         uint256 ticketLimit = classLimit[class];
         //limit number of tickets at once
         require(
             (totalSupply() + numberOfTickets) <= ticketLimit,
             "Purchase would exceed max supply of Ticket A"
         );
-        //require x amount of ETH/Token
 
         //mintIndex does not define the ticket type. URI Storage does.
         //define A,B,C Base tokenURIs.
         //when ticket is minted, set unique tokenURI ending.
         //
         for (uint256 i = 0; i < numberOfTickets; i++) {
-            //define totalSupply for ticketA
             uint256 mintIndex = totalSupply();
             string memory ticketURI = classURI[class];
             if (totalSupply() < ticketLimit) {
                 _safeMint(msg.sender, mintIndex);
-
                 _setTokenURI(mintIndex, ticketURI);
             }
         }
     }
 
+    // add public view functions to determine remaining tickets of each class
+
     function withdrawETH() public onlyOwner {
-        uint balance = address(this).balance;
+        uint256 balance = address(this).balance;
         payable(msg.sender).transfer(balance);
     }
 
     function withdrawToken() public onlyOwner {}
 
-    function _baseURI() internal view override returns (string memory) {
-        return _baseStringURI;
-    }
-
     function setBaseURI(string memory baseURI) public onlyOwner {
         _setBaseURI(baseURI);
-    }
-
-    function _setBaseURI(string memory baseURI_) internal {
-        _baseStringURI = baseURI_;
     }
 
     function setClassURI(uint256 class, string memory value) public onlyOwner {
@@ -124,6 +125,14 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
 
     function _setClassPrice(uint256 class, uint256 value) internal {
         classPrice[class] = value;
+    }
+
+    function _setBaseURI(string memory baseURI_) internal {
+        _baseStringURI = baseURI_;
+    }
+
+    function _baseURI() internal view override returns (string memory) {
+        return _baseStringURI;
     }
 
     /**
