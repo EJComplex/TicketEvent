@@ -1,5 +1,10 @@
 Ticket Contract Spec - 
 
+Updated: X number of NFT contracts deployed, closed.
+Router contract deployed. Router contract owns nft contracts. Router contract is owned.
+Open each Event using router, configure with router, buy tickets through router, withdraw funds with router.
+
+
 Ticket contract is ERC721 with extensions like metadata, enumerable? ERC721PresetMinterPauserAutoId? wrapper?, pausable, 
 Mint contract inherits from ERC721, ownable. Mint contract defines whitelisting, defines venue ticket arrangement, minting. use price oracle for payment.
 How to create different tiers of NFT? mint 0-1000 for $100. mint 1001-10000 for $50, etc.
