@@ -1,5 +1,5 @@
 from scripts.script_library import get_account
-from scripts.deploy import deployEvent, configureEvent, buyTicket, deployMock
+from scripts.deploy import deployEvent, configureEvent, buyTicketEth, deployMock
 from brownie import network, config, exceptions
 
 
@@ -14,6 +14,10 @@ import pytest
 # test mint price,
 
 # Fix tests, parameterize tests and functions, create tests for each function.
+
+# configure price feeds
+# test buying with tokens, limits, price, URI
+# test withdrawl eth, tokens
 
 
 # module wide deploy and mock.
@@ -67,14 +71,13 @@ def test_configure():
     configTxList = configureEvent(account, depEvent)
     assert depEvent.event_state() == 0
 
-    for i in range(3):
-        assert depEvent.classURI(i) == str(i)
-        assert depEvent.classLimit(i) == 10
-        assert depEvent.classPrice(i) == Web3.toWei(50, "ether")
+    assert depEvent.classURI() == str("testA")
+    assert depEvent.classLimit() == 10
+    assert depEvent.classPrice() == Web3.toWei(50, "ether")
 
 
 # buyTicket(), balanceOf(), tokenURI(), ownerOf(), Transfer Event
-def test_buy_ticket():
+def test_buy_ticket_eth():
     account = get_account()
     ticketName = "Test Event"
     ticketSymbol = "TEST"
@@ -87,26 +90,26 @@ def test_buy_ticket():
     configTxList = configureEvent(account, depEvent)
     assert depEvent.balanceOf(account) == 0
 
-    txBuyTicket = buyTicket(account, depEvent, quantity=1)
+    txBuyTicket = buyTicketEth(account, depEvent, quantity=1)
     assert depEvent.balanceOf(account) == 1
 
     tokenId = txBuyTicket.events["Transfer"]["tokenId"]
-    assert depEvent.tokenURI(tokenId) == "https://test.com/0"
+    assert depEvent.tokenURI(tokenId) == "https://test.com/testA"
 
     assert depEvent.ownerOf(tokenId) == account.address
 
 
 # buyTicket(),
-def test_batch_buy_ticket(default_deploy_configure):
+def test_batch_buy_ticket_eth(default_deploy_configure):
     (account, depEvent) = default_deploy_configure
 
-    txBuyTicket = buyTicket(account, depEvent, quantity=10)
+    txBuyTicket = buyTicketEth(account, depEvent, quantity=10)
     assert depEvent.balanceOf(account) == 10
 
 
 def test_transfer(default_deploy_configure):
     (account, depEvent) = default_deploy_configure
-    txBuyTicket = buyTicket(account, depEvent)
+    txBuyTicket = buyTicketEth(account, depEvent)
     tokenId = txBuyTicket.events["Transfer"]["tokenId"]
     assert tokenId == depEvent.tokenOfOwnerByIndex(account.address, 0)
 
@@ -118,9 +121,9 @@ def test_transfer(default_deploy_configure):
 
 def test_ticket_limit(default_deploy_configure):
     (account, depEvent) = default_deploy_configure
-    limit = depEvent.classLimit(0)
+    limit = depEvent.classLimit()
     with pytest.raises(exceptions.VirtualMachineError):
-        txBuyTicket = buyTicket(account, depEvent, quantity=limit + 1, classType=0)
+        txBuyTicket = buyTicketEth(account, depEvent, quantity=limit + 1)
 
 
 def test_only_owner():
