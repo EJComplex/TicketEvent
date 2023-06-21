@@ -41,8 +41,9 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
     constructor(
         string memory tokenName,
         string memory tokenSymbol,
-        address _priceFeedAddress
-    ) ConfirmedOwner(msg.sender) ERC721(tokenName, tokenSymbol) {
+        address _priceFeedAddress,
+        address _router
+    ) ConfirmedOwner(_router) ERC721(tokenName, tokenSymbol) {
         event_state = EVENT_STATE.CLOSED;
         ethUsdPriceFeed = AggregatorV3Interface(_priceFeedAddress);
     }

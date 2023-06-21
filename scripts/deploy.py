@@ -1,5 +1,5 @@
 from scripts.script_library import get_account, config
-from brownie import Event, MockV3Aggregator, OurToken
+from brownie import Event, MockV3Aggregator, OurToken, Router
 from web3 import Web3
 
 
@@ -49,54 +49,62 @@ def buyTicketToken(account, eventContract, tokenAddress, quantity=1):
 
 # local
 def main():
-    account = get_account()
+    TEST = True
+    if not TEST:
+        account = get_account()
 
-    # deploy mocks
-    DECIMALS = 8
-    INITIAL_VALUE = 200000000000
-    depMockV3 = deployMock(account, DECIMALS, INITIAL_VALUE)
+        # deploy mocks
+        DECIMALS = 8
+        INITIAL_VALUE = 200000000000
+        depMockV3 = deployMock(account, DECIMALS, INITIAL_VALUE)
 
-    ticketName = "Ticket Event"
-    ticketSymbol = "STUB"
-    depEvent = deployEvent(account, ticketName, ticketSymbol, depMockV3.address)
+        ticketName = "Ticket Event"
+        ticketSymbol = "STUB"
+        depEvent = deployEvent(account, ticketName, ticketSymbol, depMockV3.address)
 
-    configTxList = configureEvent(account, depEvent)
+        configTxList = configureEvent(account, depEvent)
 
-    txBuyTicket = buyTicketEth(account, depEvent)
+        txBuyTicket = buyTicketEth(account, depEvent)
 
-    # USDC mainnet feed
-    # usdcFeed = "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6"
-    # usdcAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
-    testToken = OurToken.deploy(1000000000000000000000, {"from": account})
+        # USDC mainnet feed
+        # usdcFeed = "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6"
+        # usdcAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        testToken = OurToken.deploy(1000000000000000000000, {"from": account})
 
-    # deploy mocks for stable coin
-    DECIMALS = 8
-    INITIAL_VALUE = 100000000
-    depMockV3Token = deployMock(account, DECIMALS, INITIAL_VALUE)
+        # deploy mocks for stable coin
+        DECIMALS = 8
+        INITIAL_VALUE = 100000000
+        depMockV3Token = deployMock(account, DECIMALS, INITIAL_VALUE)
 
-    txSet = setTokenAddress(
-        account, depEvent, testToken.address, depMockV3Token.address
-    )
+        txSet = setTokenAddress(
+            account, depEvent, testToken.address, depMockV3Token.address
+        )
 
-    # approve
-    txApprove = testToken.approve(
-        depEvent.address, 1000000000000000000000, {"from": account}
-    )
+        # approve
+        txApprove = testToken.approve(
+            depEvent.address, 1000000000000000000000, {"from": account}
+        )
 
-    # account2 = get_account(index=1)
+        # account2 = get_account(index=1)
 
-    # txApprove = testToken.approve(account2, 1000000000000000000000, {"from": account})
+        # txApprove = testToken.approve(account2, 1000000000000000000000, {"from": account})
 
-    # txTransferFrom = testToken.transferFrom(
-    #     account.address, account2.address, 50000000000000000000, {"from": account2}
-    # )
+        # txTransferFrom = testToken.transferFrom(
+        #     account.address, account2.address, 50000000000000000000, {"from": account2}
+        # )
 
-    txBuyTicketToken = buyTicketToken(account, depEvent, testToken.address)
+        txBuyTicketToken = buyTicketToken(account, depEvent, testToken.address)
 
-    # txBuyTicketToken = depEvent.getTicketPriceToken(
-    #     testToken.address, {"from": account}
-    # )
-    # print(txBuyTicketToken)
+        # txBuyTicketToken = depEvent.getTicketPriceToken(
+        #     testToken.address, {"from": account}
+        # )
+        # print(txBuyTicketToken)
 
-    txBuyTicketToken.wait(1)
-    # txApprove.wait(1)
+        txBuyTicketToken.wait(1)
+        # txApprove.wait(1)
+    else:
+        account = get_account()
+        router = Router.deploy({"from": account})
+        result = router.foo(10, {"from": account})
+        print(result)
+        result.wait(1)
