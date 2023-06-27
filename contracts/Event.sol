@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+//import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -56,17 +56,16 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
         ethUsdPriceFeed = AggregatorV3Interface(_newPriceFeed);
     }
 
-    function getTicketPriceEth() public view returns (uint256) {
+    function getTicketPriceEth() public view returns (uint256 costTicket) {
         (, int256 price, , , ) = ethUsdPriceFeed.latestRoundData();
         uint256 adjustedPrice = uint256(price) * 10 ** 10; //18 decimals
-        uint256 costTicket = (classPrice * 10 ** 18) / adjustedPrice;
-        return costTicket;
+        costTicket = (classPrice * 10 ** 18) / adjustedPrice;
     }
 
     //confirm decimals for token
     function getTicketPriceToken(
         address tokenAddress
-    ) public view returns (uint256) {
+    ) public view returns (uint256 costTicket) {
         require(
             tokenToPriceFeed[tokenAddress] != address(0),
             "Token address not enabled"
@@ -76,8 +75,7 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
         );
         (, int256 price, , , ) = priceFeed.latestRoundData();
         uint256 adjustedPrice = uint256(price) * 10 ** 10; //18 decimals
-        uint256 costTicket = (classPrice * 10 ** 18) / adjustedPrice;
-        return costTicket;
+        costTicket = (classPrice * 10 ** 18) / adjustedPrice;
     }
 
     function enableToken(address tokenAddress, address feed) public onlyOwner {
@@ -153,6 +151,10 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
     }
 
     // add public view functions to determine remaining tickets of each class
+
+    function remainingCount() public view returns (uint256 remaining) {
+        remaining = classLimit - totalSupply();
+    }
 
     function withdrawETH() public onlyOwner {
         uint256 balance = address(this).balance;

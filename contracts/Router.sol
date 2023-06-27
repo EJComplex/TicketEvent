@@ -20,16 +20,61 @@ import "./Event.sol";
 //     // TODO rest of your function
 // }
 
+// router contract contains tracking and mappings of deployed events. Using this info the NFT contrtact is called directly for its relevenat info.
+
 contract Router is ConfirmedOwner {
+    // totalEvents is mapped to totalClasses in the event. Used to then getEvent.
+    uint256 public totalEvents;
+    mapping(uint256 => uint256) public totalClasses;
+
     // eventIndex, eventClass, address
     mapping(uint256 => mapping(uint256 => address)) public getEvent;
 
+
+    //add events
+    //add mapping with event address to totalsupply limit, pricing, etc? Or read directly from event with view function?
+
+    event newEventDeployed(
+        uint256 eventIndex,
+        uint256 classIndex,
+        address eventAddress
+    );
+
     constructor() ConfirmedOwner(msg.sender) {}
 
-    function addMapping(
+    function getEventAddress(
         uint256 eventIndex,
         uint256 eventClass
     ) public view returns (address) {
         return getEvent[eventIndex][eventClass];
+    }
+
+    function _addEventAddress(
+        uint256 eventIndex,
+        uint256 classIndex,
+        address eventAddress
+    ) internal {
+        getEvent[eventIndex][classIndex] = eventAddress;
+        emit newEventDeployed(eventIndex, classIndex, eventAddress);
+    }
+
+    //event and class indexes are manual now, can change to automatically increment classes
+    // test removing the memory modifier
+    function newEvent(
+        string memory name,
+        string memory symbol,
+        address priceFeed,
+        uint256 eventIndex,
+        uint256 classIndex
+    ) public onlyOwner {
+        require(
+            getEvent[eventIndex][classIndex] == address(0),
+            "Event already exists"
+        );
+        require()
+        address eventAddress = address(
+            new Event(name, symbol, priceFeed, msg.sender)
+        );
+        _addEventAddress(eventIndex, classIndex, eventAddress);
     }
 }
