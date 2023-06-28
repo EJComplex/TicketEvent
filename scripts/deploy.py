@@ -50,6 +50,7 @@ def buyTicketToken(account, eventContract, tokenAddress, quantity=1):
 
 
 # local
+# redo range() so it counts prperly when starting with 1.
 def main():
     TEST = False
     if not TEST:
@@ -67,16 +68,63 @@ def main():
         ticketName = "Ticket Event"
         ticketSymbol = "STUB"
         # returns transaction hash
+
+        print(router.totalEvents())
+        for i in range(int(router.totalEvents())):
+            print(router.totalClasses(i))
+            for j in range(int(router.totalClasses(i))):
+                print(router.getEvent(i, j))
+
         depEvent = router.newEvent(
-            ticketName, ticketSymbol, depMockV3.address, 4, 4, {"from": account}
+            ticketName, ticketSymbol, depMockV3.address, {"from": account}
         )
-        eventAddress = depEvent.events["newEventDeployed"]["eventAddress"]
 
-        depEventContract = Event.at(eventAddress)
+        print(router.totalEvents())
+        for i in range(int(router.totalEvents())):
+            print(router.totalClasses(i))
+            for j in range(int(router.totalClasses(i))):
+                print(router.getEvent(i, j))
 
-        print(eventAddress)
-        print(router.getEventAddress(4, 4, {"from": account}))
+        # print(router.totalEvents())
+        # print(router.totalClasses(1))
+        # print(type(float(router.totalEvents())))
+        # print(type(router.totalClasses(1)))
+
+        depEvent2 = router.newEvent(
+            ticketName, ticketSymbol, depMockV3.address, {"from": account}
+        )
+
+        print(router.totalEvents())
+        for i in range(int(router.totalEvents())):
+            print(str(i) + "i")
+            print(router.totalClasses(i))
+            for j in range(int(router.totalClasses(i))):
+                print(router.getEvent(i, j))
+
+        # print(router.totalEvents())
+        # print(router.totalClasses(1))
+
+        # depClass = router.newClass(
+        #     ticketName, ticketSymbol, depMockV3.address, 1, {"from": account}
+        # )
+        # print(router.totalEvents())
+        # print(router.totalClasses(1))
+        # depClass2 = router.newClass(
+        #     ticketName, ticketSymbol, depMockV3.address, 1, {"from": account}
+        # )
+        # print(router.totalEvents())
+        # print(router.totalClasses(1))
+
+        # read router mappings
+
         depEvent.wait(1)
+        # eventAddress = depEvent.events["newEventDeployed"]["eventAddress"]
+
+        # depEventContract = Event.at(eventAddress)
+
+        # print(eventAddress)
+        # print(router.getEventAddress(4, 4, {"from": account}))
+        # depEvent.wait(1)
 
         # configTxList = configureEvent(account, depEvent)
 

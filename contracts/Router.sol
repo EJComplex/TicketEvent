@@ -30,7 +30,6 @@ contract Router is ConfirmedOwner {
     // eventIndex, eventClass, address
     mapping(uint256 => mapping(uint256 => address)) public getEvent;
 
-
     //add events
     //add mapping with event address to totalsupply limit, pricing, etc? Or read directly from event with view function?
 
@@ -58,23 +57,55 @@ contract Router is ConfirmedOwner {
         emit newEventDeployed(eventIndex, classIndex, eventAddress);
     }
 
-    //event and class indexes are manual now, can change to automatically increment classes
+    function _incrementEvent(uint256 eventIndex) internal {
+        totalEvents++;
+        totalClasses[eventIndex]++;
+    }
+
+    function _incrementClass(uint256 eventIndex) internal {
+        totalClasses[eventIndex]++;
+    }
+
+    //event index is incremented (new event), class is set to 0 (new event)
     // test removing the memory modifier
     function newEvent(
         string memory name,
         string memory symbol,
-        address priceFeed,
-        uint256 eventIndex,
-        uint256 classIndex
+        address priceFeed
     ) public onlyOwner {
+        //starts at 1
+        uint256 eventIndex = totalEvents + 1;
+
+        require(getEvent[eventIndex][0] == address(0), "Event already exists");
+
+        address eventAddress = address(
+            new Event(name, symbol, priceFeed, msg.sender)
+        );
+
+        //is there a counting concern here?
+        _incrementEvent(eventIndex);
+        _addEventAddress(eventIndex, 0, eventAddress);
+    }
+
+    // given an existing eventIndex, increment class for new NFT
+    function newClass(
+        string memory name,
+        string memory symbol,
+        address priceFeed,
+        uint256 eventIndex
+    ) public onlyOwner {
+        uint256 classIndex = totalClasses[eventIndex] + 1;
+
         require(
             getEvent[eventIndex][classIndex] == address(0),
             "Event already exists"
         );
-        require()
+        require(eventIndex <= totalEvents, "Event does not exist yet");
+
         address eventAddress = address(
             new Event(name, symbol, priceFeed, msg.sender)
         );
+        _incrementClass(eventIndex);
         _addEventAddress(eventIndex, classIndex, eventAddress);
     }
 }
