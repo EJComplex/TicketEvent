@@ -1,5 +1,11 @@
 from scripts.script_library import get_account
-from scripts.deploy import deployEvent, configureEvent, buyTicketEth, deployMock
+from scripts.deploy import (
+    deployEvent,
+    configureEvent,
+    buyTicketEth,
+    deployMock,
+    deployRouter,
+)
 from brownie import network, config, exceptions
 
 
@@ -30,10 +36,14 @@ def default_deploy_configure():
     depMockV3 = deployMock(account, DECIMALS, INITIAL_VALUE)
     ticketName = "Test Event"
     ticketSymbol = "TEST"
-    depEvent = deployEvent(account, ticketName, ticketSymbol, depMockV3.address)
+    depRouter = deployRouter(account)
+    depEvent = deployEvent(
+        account, ticketName, ticketSymbol, depMockV3.address, depRouter
+    )
+
     configTxList = configureEvent(account, depEvent)
 
-    return account, depEvent
+    return account, depRouter, depEvent
 
 
 @pytest.fixture(autouse=True)
@@ -50,7 +60,8 @@ def test_deploy():
     DECIMALS = 8
     INITIAL_VALUE = 200000000000
     depMockV3 = deployMock(account, DECIMALS, INITIAL_VALUE)
-    depEvent = deployEvent(account, ticketName, ticketSymbol, depMockV3)
+    depRouter = deployRouter(account)
+    depEvent = deployEvent(account, ticketName, ticketSymbol, depMockV3, depRouter)
 
     assert depEvent.name() == "Test Event"
     assert depEvent.symbol() == "TEST"
@@ -65,7 +76,8 @@ def test_configure():
     DECIMALS = 8
     INITIAL_VALUE = 200000000000
     depMockV3 = deployMock(account, DECIMALS, INITIAL_VALUE)
-    depEvent = deployEvent(account, ticketName, ticketSymbol, depMockV3)
+    depRouter = deployRouter(account)
+    depEvent = deployEvent(account, ticketName, ticketSymbol, depMockV3, depRouter)
     assert depEvent.event_state() == 1
 
     configTxList = configureEvent(account, depEvent)
@@ -85,7 +97,8 @@ def test_buy_ticket_eth():
     DECIMALS = 8
     INITIAL_VALUE = 200000000000
     depMockV3 = deployMock(account, DECIMALS, INITIAL_VALUE)
-    depEvent = deployEvent(account, ticketName, ticketSymbol, depMockV3)
+    depRouter = deployRouter(account)
+    depEvent = deployEvent(account, ticketName, ticketSymbol, depMockV3, depRouter)
 
     configTxList = configureEvent(account, depEvent)
     assert depEvent.balanceOf(account) == 0
@@ -101,26 +114,28 @@ def test_buy_ticket_eth():
 
 # buyTicket(),
 def test_batch_buy_ticket_eth(default_deploy_configure):
-    (account, depEvent) = default_deploy_configure
+    (account, depRouter, depEvent) = default_deploy_configure
 
     txBuyTicket = buyTicketEth(account, depEvent, quantity=10)
     assert depEvent.balanceOf(account) == 10
 
 
 def test_transfer(default_deploy_configure):
-    (account, depEvent) = default_deploy_configure
+    (account, depRouter, depEvent) = default_deploy_configure
     txBuyTicket = buyTicketEth(account, depEvent)
     tokenId = txBuyTicket.events["Transfer"]["tokenId"]
     assert tokenId == depEvent.tokenOfOwnerByIndex(account.address, 0)
 
     account2 = get_account(index=1)
     assert depEvent.balanceOf(account2.address) == 0
-    txTransfer = depEvent.transferFrom(account.address, account2.address, tokenId)
+    txTransfer = depEvent.transferFrom(
+        account.address, account2.address, tokenId, {"from": account}
+    )
     assert depEvent.balanceOf(account2.address) == 1
 
 
 def test_ticket_limit(default_deploy_configure):
-    (account, depEvent) = default_deploy_configure
+    (account, depRouter, depEvent) = default_deploy_configure
     limit = depEvent.classLimit()
     with pytest.raises(exceptions.VirtualMachineError):
         txBuyTicket = buyTicketEth(account, depEvent, quantity=limit + 1)
@@ -134,7 +149,8 @@ def test_only_owner():
     DECIMALS = 8
     INITIAL_VALUE = 200000000000
     depMockV3 = deployMock(account, DECIMALS, INITIAL_VALUE)
-    depEvent = deployEvent(account, ticketName, ticketSymbol, depMockV3)
+    depRouter = deployRouter(account)
+    depEvent = deployEvent(account, ticketName, ticketSymbol, depMockV3, depRouter)
     account2 = get_account(index=1)
     with pytest.raises(exceptions.VirtualMachineError):
         txOpen = depEvent.openEvent({"from": account2})

@@ -3,13 +3,6 @@ from brownie import Event, MockV3Aggregator, OurToken, Router
 from web3 import Web3
 
 
-def deployEvent(account, ticketName, ticketSymbol, priceFeed, router):
-    depEvent = Event.deploy(
-        ticketName, ticketSymbol, priceFeed, router, {"from": account}
-    )
-    return depEvent
-
-
 def configureEvent(account, eventContract):
     txList = []
     tx1 = eventContract.openEvent({"from": account})
@@ -18,10 +11,10 @@ def configureEvent(account, eventContract):
     tx2 = eventContract.setBaseURI("https://test.com/", {"from": account})
     txList.append(tx2)
 
-    tx3 = eventContract.setClassURI("testA")
-    tx4 = eventContract.setClassLimit(10)
+    tx3 = eventContract.setClassURI("testA", {"from": account})
+    tx4 = eventContract.setClassLimit(10, {"from": account})
     # $50
-    tx5 = eventContract.setClassPrice(Web3.toWei(50, "ether"))
+    tx5 = eventContract.setClassPrice(Web3.toWei(50, "ether"), {"from": account})
     txList.extend([tx3, tx4, tx5])
 
     return txList
@@ -47,6 +40,27 @@ def buyTicketToken(account, eventContract, tokenAddress, quantity=1):
     value = Web3.toWei(1, "ether")
     tx = eventContract.buyTicketToken(quantity, tokenAddress, {"from": account})
     return tx
+
+
+def deployRouter(account):
+    deployedContract = Router.deploy({"from": account})
+    return deployedContract
+
+
+def deployEvent(account, ticketName, ticketSymbol, priceFeed, routerContract):
+    txDepEvent = routerContract.newEvent(
+        ticketName, ticketSymbol, priceFeed, {"from": account}
+    )
+    depEvent = Event.at(txDepEvent.events["newEventDeployed"]["eventAddress"])
+    return depEvent
+
+
+def deployClass(
+    account, ticketName, ticketSymbol, priceFeed, routerContract, eventIndex
+):
+    depClass = routerContract.newClass(
+        ticketName, ticketSymbol, priceFeed, eventIndex, {"from": account}
+    )
 
 
 # local
@@ -78,6 +92,11 @@ def main():
         depEvent = router.newEvent(
             ticketName, ticketSymbol, depMockV3.address, {"from": account}
         )
+
+        print("start Event")
+        print(depEvent.events["newEventDeployed"]["eventIndex"])
+        print(depEvent.events["newEventDeployed"]["classIndex"])
+        print(depEvent.events["newEventDeployed"]["eventAddress"])
 
         print(router.totalEvents())
         for i in range(int(router.totalEvents())):

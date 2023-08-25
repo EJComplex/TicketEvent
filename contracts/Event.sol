@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+// Need to import the interface of the router so that the getEthPrice and getTicketPrice is callable.
+
 //NFT contract for one class of ticket
 
 // Implement payment with ETH, then with select tokens
@@ -17,6 +19,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // may allow for abi encoded/ other method of purchasing multiple type of tickets at once. To be coordinated from routing contract
 
 contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
+    address private _router;
+
     // Base URI
     string private _baseStringURI;
 
@@ -42,10 +46,12 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
         string memory tokenName,
         string memory tokenSymbol,
         address _priceFeedAddress,
-        address _router
-    ) ConfirmedOwner(_router) ERC721(tokenName, tokenSymbol) {
+        address _owner,
+        address _routerAddress
+    ) ConfirmedOwner(_owner) ERC721(tokenName, tokenSymbol) {
         event_state = EVENT_STATE.CLOSED;
         ethUsdPriceFeed = AggregatorV3Interface(_priceFeedAddress);
+        _router = _routerAddress;
     }
 
     function openEvent() public onlyOwner {
