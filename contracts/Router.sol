@@ -6,24 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Event.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
-// Deploy router, deploy nfts, set router as owner of nfts, Handle pricing in nfts,
-// router's purpose is to have one point of interaction for buying tickets and updating NFTs
-// router can handle any number of NFT ticket events.
-// router contains mappings/arrays? for tracking all event details (limits, pricing, URI, open/closed)
-// router has
-// Initially deploy NFTs separately and declare Router as owner. Maybe change to be similar to Uniswap Factory contract, self deploy.
-// when deployed NFT add contract address to router, done manually until self deploy added.
-
-//gas savings by declaring returned variable instead of writing return at the end.
-//below example 21559 -> 21554 gas!
-// function foo(uint256 input) public returns (uint256 number) {
-//     number = 100 * input;
-//     // TODO rest of your function
-// }
-
-// router contract contains tracking and mappings of deployed events. Using this info the NFT contrtact is called directly for its relevenat info.
-// add recieve, fallback functions to router. Add reentrancy defence.
-
 contract Router is ConfirmedOwner {
     mapping(address => address) tokenToPriceFeed;
     AggregatorV3Interface internal ethUsdPriceFeed;
@@ -58,30 +40,30 @@ contract Router is ConfirmedOwner {
         //tokenToPriceFeed[_tokenAddress] = AggregatorV3Interface(_newPriceFeed);
     }
 
-    function getTicketPriceEth(
-        uint256 classPrice
-    ) public view returns (uint256 costTicket) {
-        (, int256 price, , , ) = ethUsdPriceFeed.latestRoundData();
-        uint256 adjustedPrice = uint256(price) * 10 ** 10; //18 decimals
-        costTicket = (classPrice * 10 ** 18) / adjustedPrice;
-    }
+    // function getTicketPriceEth(
+    //     uint256 classPrice
+    // ) public view returns (uint256 costTicket) {
+    //     (, int256 price, , , ) = ethUsdPriceFeed.latestRoundData();
+    //     uint256 adjustedPrice = uint256(price) * 10 ** 10; //18 decimals
+    //     costTicket = (classPrice * 10 ** 18) / adjustedPrice;
+    // }
 
-    //confirm decimals for token. Not all tokens have the same decimals. Confirm this is token USD price feed
-    function getTicketPriceToken(
-        address tokenAddress,
-        uint256 classPrice
-    ) public view returns (uint256 costTicket) {
-        require(
-            tokenToPriceFeed[tokenAddress] != address(0),
-            "Token address not enabled"
-        );
-        AggregatorV3Interface priceFeed = AggregatorV3Interface(
-            tokenToPriceFeed[tokenAddress]
-        );
-        (, int256 price, , , ) = priceFeed.latestRoundData();
-        uint256 adjustedPrice = uint256(price) * 10 ** 10; //18 decimals
-        costTicket = (classPrice * 10 ** 18) / adjustedPrice;
-    }
+    // //confirm decimals for token. Not all tokens have the same decimals. Confirm this is token USD price feed
+    // function getTicketPriceToken(
+    //     address tokenAddress,
+    //     uint256 classPrice
+    // ) public view returns (uint256 costTicket) {
+    //     require(
+    //         tokenToPriceFeed[tokenAddress] != address(0),
+    //         "Token address not enabled"
+    //     );
+    //     AggregatorV3Interface priceFeed = AggregatorV3Interface(
+    //         tokenToPriceFeed[tokenAddress]
+    //     );
+    //     (, int256 price, , , ) = priceFeed.latestRoundData();
+    //     uint256 adjustedPrice = uint256(price) * 10 ** 10; //18 decimals
+    //     costTicket = (classPrice * 10 ** 18) / adjustedPrice;
+    // }
 
     function getEventAddress(
         uint256 eventIndex,

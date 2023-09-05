@@ -3,45 +3,30 @@ pragma solidity ^0.8.0;
 
 import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-//import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-// Need to import the interface of the router so that the getEthPrice and getTicketPrice is callable.
-
-//NFT contract for one class of ticket
-
-// Implement payment with ETH, then with select tokens
-// add function to update price feed
-//
-// deploy on mainnet testnet. deploy on arbitrum testnet.
-// may allow for abi encoded/ other method of purchasing multiple type of tickets at once. To be coordinated from routing contract
-
 contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
     address private _router;
 
-    // Base URI
     string private _baseStringURI;
 
-    // Price Feed
     AggregatorV3Interface internal ethUsdPriceFeed;
 
-    // State
     enum EVENT_STATE {
         OPEN,
         CLOSED
     }
     EVENT_STATE public event_state;
 
-    // URI, Count Limit, Price
     string public classURI;
     uint256 public classLimit;
     uint256 public classPrice;
 
     mapping(address => address) tokenToPriceFeed;
 
-    //update owner to be routing contract
+    //update owner to be routing contract?
     constructor(
         string memory tokenName,
         string memory tokenSymbol,
@@ -56,6 +41,10 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
 
     function openEvent() public onlyOwner {
         event_state = EVENT_STATE.OPEN;
+    }
+
+    function closeEvent() public onlyOwner {
+        event_state = EVENT_STATE.CLOSED;
     }
 
     function updatePriceFeed(address _newPriceFeed) public onlyOwner {
@@ -80,7 +69,7 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
             tokenToPriceFeed[tokenAddress]
         );
         (, int256 price, , , ) = priceFeed.latestRoundData();
-        uint256 adjustedPrice = uint256(price) * 10 ** 10; //18 decimals
+        uint256 adjustedPrice = uint256(price) * 10 ** 10; //18 decimals. THIS WILL CHANGE FOR DIFFERENT TOKENS
         costTicket = (classPrice * 10 ** 18) / adjustedPrice;
     }
 
@@ -106,10 +95,6 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
             "Purchase would exceed max supply"
         );
 
-        //mintIndex does not define the ticket type. URI Storage does.
-        //define A,B,C Base tokenURIs.
-        //when ticket is minted, set unique tokenURI ending.
-        //
         for (uint256 i = 0; i < numberOfTickets; i++) {
             uint256 mintIndex = totalSupply();
             if (totalSupply() < classLimit) {
@@ -143,10 +128,6 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
             getTicketPriceToken(tokenAddress) * numberOfTickets
         );
 
-        //mintIndex does not define the ticket type. URI Storage does.
-        //define A,B,C Base tokenURIs.
-        //when ticket is minted, set unique tokenURI ending.
-        //
         for (uint256 i = 0; i < numberOfTickets; i++) {
             uint256 mintIndex = totalSupply();
             if (totalSupply() < classLimit) {
@@ -155,8 +136,6 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
             }
         }
     }
-
-    // add public view functions to determine remaining tickets of each class
 
     function remainingCount() public view returns (uint256 remaining) {
         remaining = classLimit - totalSupply();

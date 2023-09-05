@@ -21,8 +21,10 @@ def configureEvent(account, eventContract):
 
 
 def buyTicketEth(account, eventContract, quantity=1):
-    value = Web3.toWei(1, "ether")
-    tx = eventContract.buyTicketEth(quantity, {"from": account, "value": value})
+    # value = Web3.toWei(1, "ether")
+    # Extra 10% for safety buffer when testing integeration
+    ticketCostEth = eventContract.getTicketPriceEth({"from": account}) * quantity * 1.10
+    tx = eventContract.buyTicketEth(quantity, {"from": account, "value": ticketCostEth})
     return tx
 
 
