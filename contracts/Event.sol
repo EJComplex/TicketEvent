@@ -53,11 +53,14 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
 
     function getTicketPriceEth() public view returns (uint256 costTicket) {
         (, int256 price, , , ) = ethUsdPriceFeed.latestRoundData();
-        uint256 adjustedPrice = uint256(price) * 10 ** 10; //18 decimals
-        costTicket = (classPrice * 10 ** 18) / adjustedPrice;
+        uint8 decimals = ethUsdPriceFeed.decimals();
+        uint256 adjustedPrice = uint256(price) * 10 ** (18 - decimals);
+        //uint256 adjustedPrice = uint256(price) * 10 ** 10; //18 decimals
+        costTicket = (classPrice * 10 ** decimals) / uint256(adjustedPrice);
     }
 
     //confirm decimals for token
+    //classPrice is 18 decimals
     function getTicketPriceToken(
         address tokenAddress
     ) public view returns (uint256 costTicket) {
@@ -68,9 +71,12 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(
             tokenToPriceFeed[tokenAddress]
         );
-        (, int256 price, , , ) = priceFeed.latestRoundData();
-        uint256 adjustedPrice = uint256(price) * 10 ** 10; //18 decimals. THIS WILL CHANGE FOR DIFFERENT TOKENS
-        costTicket = (classPrice * 10 ** 18) / adjustedPrice;
+        (, int256 price, , , ) = priceFeed.latestRoundData(); //price feed is 8 decimals
+        uint8 decimals = priceFeed.decimals();
+        uint256 adjustedPrice = uint256(price) * 10 ** (18 - decimals); //18 decimals. THIS WILL CHANGE FOR DIFFERENT TOKENS
+        //costTicket = (classPrice * 10 ** 18) / adjustedPrice;
+        //uint256 adjustedPrice = uint256(price) * 10 ** 10; //18 decimals. THIS WILL CHANGE FOR DIFFERENT TOKENS
+        costTicket = (classPrice * 10 ** decimals) / uint256(adjustedPrice);
     }
 
     function enableToken(address tokenAddress, address feed) public onlyOwner {

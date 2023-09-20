@@ -6,8 +6,9 @@ from scripts.deploy import (
     deployMock,
     deployRouter,
     deployClass,
+    buyTicketToken,
 )
-from brownie import network, config, exceptions
+from brownie import network, config, exceptions, OurToken
 
 
 from web3 import Web3
@@ -54,9 +55,19 @@ def default_deploy_configure():
         account, ticketName, ticketSymbol, depMockV3.address, depRouter
     )
 
+    DECIMALS = 10
+    INITIAL_VALUE = 10000000000
+    depMockV3Token = deployMock(account, DECIMALS, INITIAL_VALUE)
+
+    TT = OurToken.deploy(1000000000000000, {"from": account})
+
+    txUpdateTokenPriceFeed = depEvent.enableToken(
+        TT.address, depMockV3Token.address, {"from": account}
+    )
+
     configTxList = configureEvent(account, depEvent)
 
-    return account, depRouter, depEvent, depMockV3
+    return account, depRouter, depEvent, depMockV3, depMockV3Token, TT
 
 
 @pytest.fixture(autouse=True)
@@ -106,7 +117,14 @@ def test_configure():
 
 
 def test_buy_ticket_eth(default_deploy_configure):
-    (account, depRouter, depEvent, depMockV3) = default_deploy_configure
+    (
+        account,
+        depRouter,
+        depEvent,
+        depMockV3,
+        depMockV3Token,
+        TT,
+    ) = default_deploy_configure
     # account = get_account()
     # ticketName = "Test Event"
     # ticketSymbol = "TEST"
@@ -124,25 +142,60 @@ def test_buy_ticket_eth(default_deploy_configure):
     txBuyTicket = buyTicketEth(account, depEvent, quantity=1)
     assert depEvent.balanceOf(account) == 1
 
-    tokenId = txBuyTicket.events["Transfer"]["tokenId"]
+    tokenId = txBuyTicket.events["Transfer"][0]["tokenId"]
+    assert depEvent.tokenURI(tokenId) == "https://test.com/testA"
+
+    assert depEvent.ownerOf(tokenId) == account.address
+
+
+def test_buy_ticket_token(default_deploy_configure):
+    (
+        account,
+        depRouter,
+        depEvent,
+        depMockV3,
+        depMockV3Token,
+        TT,
+    ) = default_deploy_configure
+
+    assert depEvent.balanceOf(account) == 0
+
+    txBuyTicket = buyTicketToken(account, depEvent, TT, quantity=1)
+    assert depEvent.balanceOf(account) == 1
+
+    tokenId = txBuyTicket.events["Transfer"][1]["tokenId"]
     assert depEvent.tokenURI(tokenId) == "https://test.com/testA"
 
     assert depEvent.ownerOf(tokenId) == account.address
 
 
 def test_batch_buy_ticket_eth(default_deploy_configure):
-    (account, depRouter, depEvent, depMockV3) = default_deploy_configure
+    (
+        account,
+        depRouter,
+        depEvent,
+        depMockV3,
+        depMockV3Token,
+        TT,
+    ) = default_deploy_configure
 
     txBuyTicket = buyTicketEth(account, depEvent, quantity=10)
     assert depEvent.balanceOf(account) == 10
 
 
 # def test_burn(default_deploy_configure):
-#     (account, depRouter, depEvent, depMockV3) = default_deploy_configure
+#     (account, depRouter, depEvent, depMockV3, depMockV3Token, TT) = default_deploy_configure
 
 
 def test_transfer(default_deploy_configure):
-    (account, depRouter, depEvent, depMockV3) = default_deploy_configure
+    (
+        account,
+        depRouter,
+        depEvent,
+        depMockV3,
+        depMockV3Token,
+        TT,
+    ) = default_deploy_configure
     txBuyTicket = buyTicketEth(account, depEvent)
     tokenId = txBuyTicket.events["Transfer"]["tokenId"]
     assert tokenId == depEvent.tokenOfOwnerByIndex(account.address, 0)
@@ -157,7 +210,14 @@ def test_transfer(default_deploy_configure):
 
 
 def test_ticket_limit(default_deploy_configure):
-    (account, depRouter, depEvent, depMockV3) = default_deploy_configure
+    (
+        account,
+        depRouter,
+        depEvent,
+        depMockV3,
+        depMockV3Token,
+        TT,
+    ) = default_deploy_configure
     limit = depEvent.classLimit()
     with pytest.raises(exceptions.VirtualMachineError):
         txBuyTicket = buyTicketEth(account, depEvent, quantity=limit + 1)
@@ -179,7 +239,14 @@ def test_only_owner():
 
 
 def test_count_event_logic(default_deploy_configure):
-    (account, depRouter, depEvent, depMockV3) = default_deploy_configure
+    (
+        account,
+        depRouter,
+        depEvent,
+        depMockV3,
+        depMockV3Token,
+        TT,
+    ) = default_deploy_configure
     assert depRouter.totalEvents() == 1
     ticketName = "ticket2"
     ticketSymbol = "TK"
@@ -190,7 +257,14 @@ def test_count_event_logic(default_deploy_configure):
 
 
 def test_count_class_logic(default_deploy_configure):
-    (account, depRouter, depEvent, depMockV3) = default_deploy_configure
+    (
+        account,
+        depRouter,
+        depEvent,
+        depMockV3,
+        depMockV3Token,
+        TT,
+    ) = default_deploy_configure
     assert depRouter.totalClasses(0) == 0
     assert depRouter.totalClasses(1) == 1
     ticketName = "ticket2"
@@ -205,7 +279,14 @@ def test_count_class_logic(default_deploy_configure):
 
 
 def test_event_pricefeed(default_deploy_configure):
-    (account, depRouter, depEvent, depMockV3) = default_deploy_configure
+    (
+        account,
+        depRouter,
+        depEvent,
+        depMockV3,
+        depMockV3Token,
+        TT,
+    ) = default_deploy_configure
     # Initial value of $2000 Ether. Test $50 entry price
     ethCost = depEvent.getTicketPriceEth({"from": account})
     assert (Web3.fromWei(ethCost, "ether") - Decimal(0.025)) / Decimal(0.025) < 0.001
@@ -216,7 +297,14 @@ def test_event_pricefeed(default_deploy_configure):
 
 
 def test_remaining_count(default_deploy_configure):
-    (account, depRouter, depEvent, depMockV3) = default_deploy_configure
+    (
+        account,
+        depRouter,
+        depEvent,
+        depMockV3,
+        depMockV3Token,
+        TT,
+    ) = default_deploy_configure
 
     assert depEvent.remainingCount({"from": account}) == 10
     txBuyTickets = buyTicketEth(account, depEvent, quantity=6)
@@ -224,7 +312,14 @@ def test_remaining_count(default_deploy_configure):
 
 
 def test_withdraw_eth(default_deploy_configure):
-    (account, depRouter, depEvent, depMockV3) = default_deploy_configure
+    (
+        account,
+        depRouter,
+        depEvent,
+        depMockV3,
+        depMockV3Token,
+        TT,
+    ) = default_deploy_configure
     txBuyTickets = buyTicketEth(account, depEvent, quantity=6)
 
     startBalanceAccount = account.balance()
