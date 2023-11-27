@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "../interfaces/IEvent.sol";
 
 contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
     address private _router;
@@ -51,6 +52,7 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
         ethUsdPriceFeed = AggregatorV3Interface(_newPriceFeed);
     }
 
+    // Thanks Chainlink!
     function getTicketPriceEth() public view returns (uint256 costTicket) {
         (, int256 price, , , ) = ethUsdPriceFeed.latestRoundData();
         uint8 decimals = ethUsdPriceFeed.decimals();
@@ -59,8 +61,6 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
         costTicket = (classPrice * 10 ** decimals) / uint256(adjustedPrice);
     }
 
-    //confirm decimals for token
-    //classPrice is 18 decimals
     function getTicketPriceToken(
         address tokenAddress
     ) public view returns (uint256 costTicket) {
@@ -71,11 +71,9 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(
             tokenToPriceFeed[tokenAddress]
         );
-        (, int256 price, , , ) = priceFeed.latestRoundData(); //price feed is 8 decimals
+        (, int256 price, , , ) = priceFeed.latestRoundData();
         uint8 decimals = priceFeed.decimals();
         uint256 adjustedPrice = uint256(price) * 10 ** (18 - decimals); //18 decimals. THIS WILL CHANGE FOR DIFFERENT TOKENS
-        //costTicket = (classPrice * 10 ** 18) / adjustedPrice;
-        //uint256 adjustedPrice = uint256(price) * 10 ** 10; //18 decimals. THIS WILL CHANGE FOR DIFFERENT TOKENS
         costTicket = (classPrice * 10 ** decimals) / uint256(adjustedPrice);
     }
 
@@ -194,6 +192,18 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
         return _baseStringURI;
     }
 
+    // Fallback function must be declared as external.
+    fallback() external payable {
+        // send / transfer (forwards 2300 gas to this fallback function)
+        // call (forwards all of the gas)
+        //emit Log("fallback", gasleft());
+    }
+
+    // Receive is a variant of fallback that is triggered when msg.data is empty
+    receive() external payable {
+        //emit Log("receive", gasleft());
+    }
+
     /**
      * @dev See {ERC721-_beforeTokenTransfer}.
      */
@@ -222,13 +232,21 @@ contract Event is ConfirmedOwner, ERC721URIStorage, ERC721Enumerable {
         ERC721URIStorage._burn(tokenId);
     }
 
-    /**
-     * @dev See {IERC165-supportsInterface}
-     */
+    // /**
+    //  * @dev See {IERC165-supportsInterface}
+    //  */
+    // function supportsInterface(
+    //     bytes4 interfaceId
+    // ) public view override(ERC721, ERC721Enumerable) returns (bool) {
+    //     return ERC721Enumerable.supportsInterface(interfaceId);
+    // }
+
     function supportsInterface(
         bytes4 interfaceId
     ) public view override(ERC721, ERC721Enumerable) returns (bool) {
-        return ERC721Enumerable.supportsInterface(interfaceId);
+        return
+            interfaceId == type(IEvent).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 
     /**

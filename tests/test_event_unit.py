@@ -59,6 +59,7 @@ def default_deploy_configure():
     INITIAL_VALUE = 10000000000
     depMockV3Token = deployMock(account, DECIMALS, INITIAL_VALUE)
 
+    # 100k tokens
     TT = OurToken.deploy(1000000000000000, {"from": account})
 
     txUpdateTokenPriceFeed = depEvent.enableToken(
@@ -161,6 +162,38 @@ def test_buy_ticket_token(default_deploy_configure):
     assert depEvent.balanceOf(account) == 0
 
     txBuyTicket = buyTicketToken(account, depEvent, TT, quantity=1)
+    assert depEvent.balanceOf(account) == 1
+
+    tokenId = txBuyTicket.events["Transfer"][1]["tokenId"]
+    assert depEvent.tokenURI(tokenId) == "https://test.com/testA"
+
+    assert depEvent.ownerOf(tokenId) == account.address
+
+
+def test_buy_ticket_token_decimal(default_deploy_configure):
+    (
+        account,
+        depRouter,
+        depEvent,
+        depMockV3,
+        depMockV3Token,
+        TT,
+    ) = default_deploy_configure
+
+    DECIMALS = 12
+    INITIAL_VALUE = 20000000000
+    depMockV3Token = deployMock(account, DECIMALS, INITIAL_VALUE)
+
+    # 100k tokens
+    TT2 = OurToken.deploy(100000000000000000, {"from": account})
+
+    txUpdateTokenPriceFeed = depEvent.enableToken(
+        TT2.address, depMockV3Token.address, {"from": account}
+    )
+
+    assert depEvent.balanceOf(account) == 0
+
+    txBuyTicket = buyTicketToken(account, depEvent, TT2, quantity=1)
     assert depEvent.balanceOf(account) == 1
 
     tokenId = txBuyTicket.events["Transfer"][1]["tokenId"]

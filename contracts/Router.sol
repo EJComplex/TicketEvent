@@ -4,12 +4,8 @@ pragma solidity ^0.8.0;
 import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Event.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 contract Router is ConfirmedOwner {
-    mapping(address => address) tokenToPriceFeed;
-    AggregatorV3Interface internal ethUsdPriceFeed;
-
     // totalEvents is mapped to totalClasses in the event. Used to then getEvent.
     uint256 public totalEvents;
     mapping(uint256 => uint256) public totalClasses;
@@ -27,43 +23,6 @@ contract Router is ConfirmedOwner {
     );
 
     constructor() ConfirmedOwner(msg.sender) {}
-
-    function updateEthPriceFeed(address _newPriceFeed) public onlyOwner {
-        ethUsdPriceFeed = AggregatorV3Interface(_newPriceFeed);
-    }
-
-    function updateTokenPriceFeed(
-        address _tokenAddress,
-        address _newPriceFeed
-    ) public onlyOwner {
-        tokenToPriceFeed[_tokenAddress] = _newPriceFeed;
-        //tokenToPriceFeed[_tokenAddress] = AggregatorV3Interface(_newPriceFeed);
-    }
-
-    // function getTicketPriceEth(
-    //     uint256 classPrice
-    // ) public view returns (uint256 costTicket) {
-    //     (, int256 price, , , ) = ethUsdPriceFeed.latestRoundData();
-    //     uint256 adjustedPrice = uint256(price) * 10 ** 10; //18 decimals
-    //     costTicket = (classPrice * 10 ** 18) / adjustedPrice;
-    // }
-
-    // //confirm decimals for token. Not all tokens have the same decimals. Confirm this is token USD price feed
-    // function getTicketPriceToken(
-    //     address tokenAddress,
-    //     uint256 classPrice
-    // ) public view returns (uint256 costTicket) {
-    //     require(
-    //         tokenToPriceFeed[tokenAddress] != address(0),
-    //         "Token address not enabled"
-    //     );
-    //     AggregatorV3Interface priceFeed = AggregatorV3Interface(
-    //         tokenToPriceFeed[tokenAddress]
-    //     );
-    //     (, int256 price, , , ) = priceFeed.latestRoundData();
-    //     uint256 adjustedPrice = uint256(price) * 10 ** 10; //18 decimals
-    //     costTicket = (classPrice * 10 ** 18) / adjustedPrice;
-    // }
 
     function getEventAddress(
         uint256 eventIndex,
@@ -132,5 +91,28 @@ contract Router is ConfirmedOwner {
         );
         _incrementClass(eventIndex);
         _addEventAddress(eventIndex, classIndex, eventAddress);
+    }
+
+    function withdrawETH() public onlyOwner {
+        uint256 balance = address(this).balance;
+        payable(msg.sender).transfer(balance);
+    }
+
+    function withdrawToken(address tokenAddress, address to) public onlyOwner {
+        IERC20 token = IERC20(tokenAddress);
+        uint256 amount = token.balanceOf(address(this));
+        token.transfer(to, amount);
+    }
+
+    // Fallback function must be declared as external.
+    fallback() external payable {
+        // send / transfer (forwards 2300 gas to this fallback function)
+        // call (forwards all of the gas)
+        //emit Log("fallback", gasleft());
+    }
+
+    // Receive is a variant of fallback that is triggered when msg.data is empty
+    receive() external payable {
+        //emit Log("receive", gasleft());
     }
 }

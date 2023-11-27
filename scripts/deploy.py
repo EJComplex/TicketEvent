@@ -108,11 +108,12 @@ def main():
         account, ticketName, ticketSymbol, depMockV3.address, depRouter
     )
 
-    DECIMALS = 10
+    DECIMALS = 12
     INITIAL_VALUE = 10000000000
     depMockV3Token = deployMock(account, DECIMALS, INITIAL_VALUE)
 
-    TT = OurToken.deploy(1000000000000000, {"from": account})
+    # 100k
+    TT = OurToken.deploy(100000000000000000, {"from": account})
 
     txUpdateTokenPriceFeed = depEvent.enableToken(
         TT.address, depMockV3Token.address, {"from": account}
@@ -120,10 +121,10 @@ def main():
 
     configTxList = configureEvent(account, depEvent)
 
-    print(TT.balanceOf(account.address))
-    print(TT.allowance(account.address, depEvent.address))
+    print(TT.balanceOf(account.address) / (10**DECIMALS))
+    print(TT.allowance(account.address, depEvent.address) / (10**DECIMALS))
 
-    print(depEvent.getTicketPriceToken(TT.address))
+    print(depEvent.getTicketPriceToken(TT.address) / (10**DECIMALS))
 
     txBuyTicket = buyTicketToken(account, depEvent, TT, quantity=1)
 
