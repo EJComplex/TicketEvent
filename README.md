@@ -6,3 +6,5 @@ New router for each event organizer. Router tracks the separation of events and 
 NFTs can be minted using ETH or an allowed token.
 
 Change to test laptop push capability
+
+change 2
